@@ -9,6 +9,7 @@
 
 using namespace std;
 
+
 int get_screen_width(void) {
     return GetSystemMetrics(SM_CXSCREEN);
 }
@@ -24,10 +25,6 @@ struct point {
 };
 
 inline bool is_color(int red, int green, int blue) {
-        if (green >= 190) {
-            return false;
-        }
-
         if (green >= 140) {
             return abs(red - blue) <= 8 &&
                 red - green >= 50 &&
@@ -43,6 +40,22 @@ inline bool is_color(int red, int green, int blue) {
             blue >= 100;
 }
 
+inline bool is_color2(int red, int green, int blue) {
+    if (green >= 140) {
+        return abs(red - blue) <= 8 &&
+            red - green >= 50 &&
+            blue - green >= 50 &&
+            red >= 105 &&
+            blue >= 105;
+    }
+
+    return abs(red - blue) <= 13 &&
+        red - green >= 60 &&
+        blue - green >= 60 &&
+        red >= 110 &&
+        blue >= 100;
+}
+
 InterceptionContext context;
 InterceptionDevice device;
 InterceptionStroke stroke;
@@ -52,9 +65,10 @@ const int screen_width = get_screen_width(), screen_height = get_screen_height()
 
 int aim_x = 0;
 int aim_y = 0;
+int w = 0;
+int h = 0;
 
 void bot() {
-    int w = 100, h = 100;
     auto t_start = std::chrono::high_resolution_clock::now();
     auto t_end = std::chrono::high_resolution_clock::now();
 
@@ -62,7 +76,7 @@ void bot() {
     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, w, h);
     screenData = (BYTE*)malloc(5 * screen_width * screen_height);
     HDC hDC = CreateCompatibleDC(hScreen);
-    point middle_screen(screen_width / 2, screen_height / 2);
+    point middle_screen(screen_width >> 1, screen_height >> 1);
 
     BITMAPINFOHEADER bmi = { 0 };
     bmi.biSize = sizeof(BITMAPINFOHEADER);
@@ -76,7 +90,7 @@ void bot() {
     while (run_threads) {
         Sleep(6);
         HGDIOBJ old_obj = SelectObject(hDC, hBitmap);
-        BOOL bRet = BitBlt(hDC, 0, 0, w, h, hScreen, middle_screen.x - (w/2), middle_screen.y - (h/2), SRCCOPY);
+        BOOL bRet = BitBlt(hDC, 0, 0, w, h, hScreen, middle_screen.x - (w >> 1), middle_screen.y - (h >> 1), SRCCOPY);
         SelectObject(hDC, old_obj);
         GetDIBits(hDC, hBitmap, 0, h, screenData, (BITMAPINFO*)&bmi, DIB_RGB_COLORS);
         bool stop_loop = false;
@@ -86,9 +100,9 @@ void bot() {
                 #define green screenData[i + (j*w*4) + 1]
                 #define blue screenData[i + (j*w*4) + 0]
 
-                if (is_color(red, green, blue)) {
-                    aim_x = (i / 4) - (w/2);
-                    aim_y = j - (h/2) + 3;
+                if (green < 190 && is_color(red, green, blue)) {
+                    aim_x = (i >> 2) - (w >> 1);
+                    aim_y = j - (h >> 1) + 3;
                     stop_loop = true;
                     break;
                 }
@@ -105,21 +119,20 @@ void bot() {
 }
 
 int main(void) {
+    int zone = 50;
     double sensitivity = 0.52;
-    double smoothing = 0.5;
     AllocConsole();
     AttachConsole(GetCurrentProcessId());
     auto w_f = freopen("CON", "w", stdout);
     auto r_f = freopen("CON", "r", stdin);
-    cout << "YES" << endl;
-    int mode = 0;
+    cin >> zone;
     cin >> sensitivity;
-    cin >> smoothing;
-    cin >> mode;
     fclose(w_f);
     fclose(r_f);
     FreeConsole();
     thread(bot).detach();
+    w = zone;
+    h = zone;
     auto t_start = std::chrono::high_resolution_clock::now();
     auto t_end = std::chrono::high_resolution_clock::now();
     auto left_start = std::chrono::high_resolution_clock::now();
@@ -136,50 +149,40 @@ int main(void) {
         t_end = std::chrono::high_resolution_clock::now();
         double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
 
-        if (mstroke.state & INTERCEPTION_MOUSE_LEFT_BUTTON_UP) {
-            left_down = false;
-        }
-
         CURSORINFO cursorInfo = { 0 };
         cursorInfo.cbSize = sizeof(cursorInfo);
         GetCursorInfo(&cursorInfo);
         if (cursorInfo.flags != 1) {
-            if (((mode & 1) > 0) && (mstroke.state & INTERCEPTION_MOUSE_LEFT_BUTTON_DOWN)) {
-                left_down = true;
+            if ((mstroke.state & INTERCEPTION_MOUSE_LEFT_BUTTON_DOWN) || (mstroke.state & INTERCEPTION_MOUSE_BUTTON_5_DOWN)) {
                 if (elapsed_time_ms > 7) {
                     t_start = std::chrono::high_resolution_clock::now();
                     left_start = std::chrono::high_resolution_clock::now();
-                    if (aim_x != 0 || aim_y != 0) {
+                    if (aim_x >= -w && aim_x <= w && aim_y >= -h && aim_y <= h) {
                         mstroke.x += double(aim_x) * sensitivity_x;
-                        mstroke.y += double(aim_y) * sensitivity_y;
+                        mstroke.y += double(aim_y + 5) * sensitivity_y;
                     }
                 }
             }
-            else if (((mode & 2) > 0) && (mstroke.flags == 0)) {
-                if (elapsed_time_ms > 7) {
-                    t_start = std::chrono::high_resolution_clock::now();
-                    if (aim_x != 0 || aim_y != 0) {
-                        left_end = std::chrono::high_resolution_clock::now();
-                        double recoil_ms = std::chrono::duration<double, std::milli>(left_end - left_start).count();
-                        double extra = 38.0 * (screen_height / 1080.0) * (recoil_ms / 1000.0);
-                        if (!left_down) {
-                            extra = 0;
-                        }
-                        else if (extra > 38.0) {
-                            extra = 38.0;
-                        }
-                        double v_x = double(aim_x) * sensitivity_x * smoothing;
-                        double v_y = double(aim_y + extra) * sensitivity_y * smoothing;
-                        if (fabs(v_x) < 1.0) {
-                            v_x = v_x > 0 ? 1.05 : -1.05;
-                        }
-                        if (fabs(v_y) < 1.0) {
-                            v_y = v_y > 0 ? 1.05 : -1.05;
-                        }
-                        mstroke.x += v_x;
-                        mstroke.y += v_y;
-                    }
+            if (GetAsyncKeyState(VK_ADD))
+            {
+                if (sensitivity <= 1.0)
+                {
+                    sensitivity += 0.01;
+                    double sensitivity_x = 1.0 / sensitivity / (screen_width / 1920.0) * 1.08;
+                    double sensitivity_y = 1.0 / sensitivity / (screen_height / 1080.0) * 1.08;
                 }
+                Sleep(40);
+            }
+
+            if (GetAsyncKeyState(VK_SUBTRACT))
+            {
+                if (sensitivity > 0.35)
+                {
+                    sensitivity -= 0.01;
+                    double sensitivity_x = 1.0 / sensitivity / (screen_width / 1920.0) * 1.08;
+                    double sensitivity_y = 1.0 / sensitivity / (screen_height / 1080.0) * 1.08;
+                }
+                Sleep(40);
             }
         }
 

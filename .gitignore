@@ -1,0 +1,15 @@
+
+*.log
+*.tlog
+*.pdb
+*.ilk
+*.dll
+*.obj
+*.txt
+*.pch
+*.ipch
+.vs/Ishish/v16/.suo
+*.db
+*.ipdb
+*.iobj
+*.idb
