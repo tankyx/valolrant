@@ -76,12 +76,14 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\Tanguy\Documents\Interception\Interception\library;$(IncludePath)</IncludePath>
-    <ExecutablePath>C:\Users\Tanguy\Documents\Interception\Interception\library\x64;$(ExecutablePath)</ExecutablePath>
-    <LibraryPath>C:\Users\Tanguy\Documents\Interception\Interception\library\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\titic\Documents\Interception\library\x64;$(IncludePath)</IncludePath>
+    <ExecutablePath>C:\Users\titic\Documents\Interception\library\x64;$(ExecutablePath)</ExecutablePath>
+    <LibraryPath>C:\Users\titic\Documents\Interception\library\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\Users\titic\Documents\Interception\library;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\titic\Documents\GitHub\valolrant\Dll2\lib\32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
